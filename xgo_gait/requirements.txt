@@ -1,0 +1,6 @@
+numpy
+bleak
+matplotlib   # viz only
+scipy        # sim_check only
+pybullet     # sim_check only
+pytest       # tests only
