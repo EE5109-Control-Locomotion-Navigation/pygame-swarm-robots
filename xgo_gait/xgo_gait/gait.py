@@ -38,7 +38,11 @@ class GaitParams:
 
 
 def trot_params(**kw) -> GaitParams:
-    base = dict(period=0.9, duty=0.55,
+    # hardware-verified on XGO-Lite (L-4.3.7): walks fwd ~30 mm/s.
+    # stand_x<0 biases CoG forward over the diagonal support pairs —
+    # needed for propulsion on this robot given its ~0.4 s servo lag.
+    base = dict(period=1.5, duty=0.62, step_height=14.0,
+                stand_x=-10.0, stand_z=96.0,
                 phase_offsets=(0.0, 0.5, 0.0, 0.5))  # LF+RR / RF+LR
     base.update(kw)
     return GaitParams(**base)
@@ -47,9 +51,11 @@ def trot_params(**kw) -> GaitParams:
 def crawl_params(**kw) -> GaitParams:
     # lateral-sequence walk, hind-before-fore on each side:
     # swing order LR -> LF -> RR -> RF; statically stable for duty >= 0.75
-    base = dict(period=1.6, duty=0.75,
+    # hardware-verified: walks fwd at vx=10..20 mm/s
+    base = dict(period=3.5, duty=0.75, step_height=14.0,
+                stand_z=98.0,
                 phase_offsets=(0.5, 0.0, 0.25, 0.75),
-                body_shift_gain=0.5)
+                body_shift_gain=0.1)
     base.update(kw)
     return GaitParams(**base)
 

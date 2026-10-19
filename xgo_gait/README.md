@@ -51,10 +51,13 @@ ROS 2 wrapper: `xgo_gait_node` in `xgolite_ws/src/xgo_ros`
 
 Verified on the physical robot (`XGOLITE_9878` @ `38:18:2B:4F:E9:DA`):
 
-- **LEG_POS x-axis is inverted on the wire.** Commanding +x moves the
-  foot toward the tail, opposite the vendor doc convention. The
-  transport layer applies `FOOT_X_SIGN = −1` (`protocol.py`) so the
-  library keeps "+x = forward" everywhere else.
+- **The physical legs are built x-mirrored vs. our nominal IK model**
+  (the knees fold the other way). `LegKinematics` negates x at the
+  ik/fk/chain boundary, so leg-frame +x = physical forward everywhere
+  outside `kinematics.py`. Confirmed by a crawl test that walked
+  *backward* before the fix. (Originally misdiagnosed as a firmware
+  wire inversion — the firmware LEG_POS convention is the documented
+  one, `FOOT_X_SIGN = +1`.)
 - **IMU reads must be per-axis**: request 4 bytes at 0x62/0x63/0x64;
   a single 12-byte read at 0x62 returns nothing.
 - **BLE write coalescing**: read requests must live in a separate

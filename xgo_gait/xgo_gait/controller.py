@@ -40,6 +40,7 @@ class GaitController:
         self._t0 = 0.0
         self._ramp_s = 2.0
         self._start_feet = None
+        self.last_feet = None              # last commanded 4x3 feet (leg frame)
         self.on_estop = None               # callable(reason:str)
 
     # ------------------------------------------------------------------
@@ -106,7 +107,7 @@ class GaitController:
                 break
             spent = time.monotonic() - tick
             if spent < dt:
-                self._running.wait(dt - spent)
+                time.sleep(dt - spent)
         self._running.clear()
 
     def _estop(self, reason: str):
@@ -137,6 +138,8 @@ class GaitController:
                 feet = (1 - w) * self._start_feet + w * feet
             else:
                 self._start_feet = None
+
+        self.last_feet = feet.copy()
 
         if self.mode == self.MODE_FOOT:
             self.robot.set_foot_positions(feet)

@@ -39,6 +39,8 @@ def main():
     ap.add_argument('--seconds', type=float, default=15.0)
     ap.add_argument('--hz', type=float, default=20.0)
     ap.add_argument('--calibrate', default='')
+    ap.add_argument('--log', default='',
+                    help='CSV: t, rpy, 12 servo deg, 12 leg-frame feet')
     args = ap.parse_args()
 
     kin = QuadKinematics()
@@ -67,6 +69,12 @@ def main():
         print(f'{args.gait} via {args.mode} mode at {args.hz} Hz, '
               f'v=({args.vx},{args.vy})mm/s yaw={args.vyaw}rad/s — '
               f'Ctrl-C to stop')
+        log_f = open(args.log, 'w') if args.log else None
+        if log_f:
+            log_f.write('t,roll,pitch,yaw,'
+                        + ','.join(f's{i}' for i in range(12)) + ','
+                        + ','.join(f'f{i}' for i in range(12)) + ','
+                        + ','.join(f'c{i}' for i in range(12)) + '\n')
         ctl.start(ramp_s=2.5)
         t0 = time.monotonic()
         try:
@@ -79,12 +87,26 @@ def main():
                       f"pitch {dog.imu_deg[1]:+5.1f} "
                       f"yaw {dog.imu_deg[2]:+6.1f} "
                       f"servo[{m.min():+6.1f},{m.max():+6.1f}]   ", end='')
+                if log_f:
+                    feet = kin.servo_deg_to_feet_mm(m).reshape(-1)
+                    cmd = (ctl.last_feet.reshape(-1)
+                           if ctl.last_feet is not None
+                           else np.full(12, np.nan))
+                    log_f.write(f"{time.monotonic()-t0:.2f},"
+                                f"{dog.imu_deg[0]},{dog.imu_deg[1]},"
+                                f"{dog.imu_deg[2]},"
+                                + ','.join(f'{v:.2f}' for v in m) + ','
+                                + ','.join(f'{v:.2f}' for v in feet) + ','
+                                + ','.join(f'{v:.2f}' for v in cmd) + '\n')
         except KeyboardInterrupt:
             print('\ninterrupted')
         finally:
             ctl.stop()
+            if log_f:
+                log_f.close()
+                print(f'\nlog -> {args.log}')
             dog.reset()
-            print('\nreset sent')
+            print('reset sent')
 
 
 if __name__ == '__main__':

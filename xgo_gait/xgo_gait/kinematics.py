@@ -18,6 +18,14 @@ Joint angle conventions (our own, radians):
             0 = straight continuation of the thigh; negative folds the calf
             toward -x (dog-like "elbow back" configuration).
 
+NOTE on the x direction: the physical robot's legs are built mirrored
+relative to the conventions above — its knees fold toward *physical*
++x, not -x.  The public leg frame keeps +x = physical forward, so
+ik()/fk()/chain() negate x at the boundary: all internal math stays in
+the mirrored "model frame" that the servo calibration was fitted
+against.  Everything outside this file (gait, controller, body
+transforms) may treat leg-frame +x as genuinely forward.
+
 Servo degrees = sign * joint_deg + offset, where sign/offset per servo are
 calibration parameters (defaults sign=+1, offset=0 until fitted).
 """
@@ -81,7 +89,7 @@ class LegKinematics:
         x = px
         y_hip = self.d * ch - pd * sh
         z = self.d * sh + pd * ch
-        return np.array([x, y_hip - self.d, z])
+        return np.array([-x, y_hip - self.d, z])   # model x mirrored
 
     def chain(self, hip: float, thigh: float, knee: float):
         """Return (hip_pivot, thigh_pivot, knee, foot) positions in the
@@ -93,7 +101,8 @@ class LegKinematics:
         pd_k = self.l1 * np.cos(thigh)
         knee_pt = thigh_pt + np.array([px_k, -pd_k * sh, pd_k * ch])
         foot = self.fk(hip, thigh, knee)
-        return hip_pt, thigh_pt, knee_pt, foot
+        pts = [hip_pt, thigh_pt, knee_pt, foot]
+        return [p * np.array([-1.0, 1.0, 1.0]) for p in pts]  # model x mirrored
 
     def ik(self, target) -> np.ndarray:
         """Foot position (x, y, z) mm -> (hip, thigh, knee) rad.
@@ -101,6 +110,7 @@ class LegKinematics:
         Raises ValueError if unreachable.
         """
         x, y, z = np.asarray(target, dtype=float)
+        x = -x                # public +x (fwd) -> mirrored model frame
         y = y + self.d          # leg frame -> hip frame
         d = self.d
         rho = np.hypot(y, z)

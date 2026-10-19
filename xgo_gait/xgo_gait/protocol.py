@@ -59,10 +59,10 @@ MOTOR_LIMIT = [
 # Foot workspace in the firmware leg frame (mm): x fwd, y left, z down
 LEG_LIMIT = [(-25.0, 25.0), (-18.0, 18.0), (60.0, 110.0)]
 
-# Empirically (L-4.3.7 firmware, XGO-Lite), commanding LEG_POS +x moves the
-# foot toward the tail -- the wire convention is opposite the documented
-# "+x forward" and our model convention.  Apply this sign to x on the wire.
-FOOT_X_SIGN = -1.0
+# Firmware LEG_POS uses the documented convention: +x = physically
+# forward.  (An earlier "firmware x-inversion" finding was actually a
+# mirror in our own IK model — see the NOTE in kinematics.py.)
+FOOT_X_SIGN = 1.0
 
 ACTION_RESET = 0xFF
 
