@@ -71,6 +71,31 @@ Verified on the physical robot (`XGOLITE_9878` @ `38:18:2B:4F:E9:DA`):
   Effective geometry therefore differs from the URDF values.
 - Battery % is register 0x01 (1 byte).
 
+### Latency budget (measured)
+
+The ~0.5 s command-to-motion delay that dominates control design:
+
+| Path segment | Latency |
+|---|---|
+| BLE link (one way) | ~50 ms (98 ms read round-trip, median) |
+| firmware → servo pipeline (dead time) | ~250–350 ms |
+| servo move + under-reach deadband | ~200 ms to ~80 % of step |
+
+Step responses show a *fixed* ~300 ms dead time then a fast move —
+not a first-order lag, and `MOTOR_SPEED` (0x5C) does not change it
+(that register governs built-in actions, not direct 0x50 writes).
+The dead time is inside the firmware, so no transport improvement
+can remove it; stabilizers must be designed for ~0.5 s of delay.
+
+### USB-serial port (tested, dead end for control)
+
+The robot's USB-C port exposes a UART (`/dev/ttyUSB0`, 115200 baud,
+same packet protocol): register *reads* work and are ~2.5x faster
+than BLE (~40 ms round-trip).  However actuation *writes* (0x50 servo
+angles, ACTION, PERFORM) are silently ignored — it is a debug/
+telemetry port, not the control port.  Useful only if faster state
+logging is ever needed; BLE remains the only command channel.
+
 ## Closed-loop stabilization (`balance.py`, `mpc.py`)
 
 Stabilizers plug into `GaitController(stabilizers=[...])`; each tick they
