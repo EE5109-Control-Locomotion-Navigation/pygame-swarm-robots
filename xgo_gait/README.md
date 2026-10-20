@@ -96,6 +96,22 @@ python demos/compare_demo.py --gait trot --weak-leg 0   # sim A/B
 `XGoLite` API with a first-order servo-lag model (τ≈0.4 s), command
 latency, and `servo_err` miscalibration injection.
 
+### Recommended trot config (hardware-verified)
+
+```bash
+demos/walk_demo.py --gait trot --vx 60 --stabilize heading \
+    --calibrate calibration.npz
+```
+
+vx 50–70 mm/s all work; 60 gives the best stability (rms tilt ~6 deg,
+yaw wander ~4 deg over 12 s).  vx 80 exceeds the swing-speed limit:
+feet must cover ~79 mm in the 0.6 s swing window and tracking collapses
+(~30 % realized).  Faster trots are *more* stable than slow ones — the
+body spends less time rocking on each diagonal pair.  Not helpful:
+`--body-shift` (lateral CoG motion pumps the rock), motor_speed 255
+(breaks servo tracking — keep 200), shorter period at same vx (higher
+cadence = more rock cycles/sec).
+
 ### Hardware A/B findings (trot, vx 30 mm/s, 12 s runs)
 
 | Config | rms tilt | yaw end |

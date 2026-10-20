@@ -41,6 +41,10 @@ def main():
     ap.add_argument('--seconds', type=float, default=15.0)
     ap.add_argument('--hz', type=float, default=20.0)
     ap.add_argument('--calibrate', default='')
+    ap.add_argument('--motor-speed', type=int, default=200,
+                    help='servo slew rate 1-255 (firmware 0x5C)')
+    ap.add_argument('--body-shift', type=float, default=None,
+                    help='body_shift_gain 0..1 (CoG toward support polygon)')
     ap.add_argument('--leg-gain', default='',
                     help='per-leg stride scale, e.g. "1.2,1,1,1.2"')
     ap.add_argument('--stabilize', default='none',
@@ -63,6 +67,8 @@ def main():
         p.step_height = args.step_height
     if args.period is not None:
         p.period = args.period
+    if args.body_shift is not None:
+        p.body_shift_gain = args.body_shift
     if args.leg_gain:
         g = [float(v) for v in args.leg_gain.split(',')]
         assert len(g) == 4
@@ -71,7 +77,7 @@ def main():
     with XGoLite(args.address) as dog:
         print('firmware:', dog.read_firmware(),
               '| battery:', dog.read_battery(), '%')
-        dog.set_motor_speed(200)
+        dog.set_motor_speed(args.motor_speed)
 
         stabs = []
         for name in args.stabilize.split(','):
