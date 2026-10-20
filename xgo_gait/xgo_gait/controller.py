@@ -71,6 +71,14 @@ class GaitController:
     # ------------------------------------------------------------------
     def start(self, ramp_s: float = 2.0):
         self._ramp_s = ramp_s
+        # poll fresh IMU/servo state BEFORE stabilizers lock references
+        # (imu_deg/motor_deg start at zeros; HeadingPID would otherwise
+        # capture a stale heading and pin its trim at max_vyaw)
+        try:
+            self.robot.request_state(motors=True, imu=True)
+            time.sleep(0.4)
+        except Exception:
+            pass
         # capture current foot positions for the ramp-in blend
         try:
             deg = self.robot.read_motors()[:12]

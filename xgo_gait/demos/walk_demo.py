@@ -41,6 +41,8 @@ def main():
     ap.add_argument('--seconds', type=float, default=15.0)
     ap.add_argument('--hz', type=float, default=20.0)
     ap.add_argument('--calibrate', default='')
+    ap.add_argument('--leg-gain', default='',
+                    help='per-leg stride scale, e.g. "1.2,1,1,1.2"')
     ap.add_argument('--stabilize', default='none',
                     help='comma list: pid,heading,odom,lqr,mpc '
                          '(e.g. --stabilize pid,heading)')
@@ -61,6 +63,10 @@ def main():
         p.step_height = args.step_height
     if args.period is not None:
         p.period = args.period
+    if args.leg_gain:
+        g = [float(v) for v in args.leg_gain.split(',')]
+        assert len(g) == 4
+        p.leg_gain = tuple(g)
 
     with XGoLite(args.address) as dog:
         print('firmware:', dog.read_firmware(),

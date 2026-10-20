@@ -35,13 +35,16 @@ class GaitParams:
     phase_offsets: tuple = (0.5, 0.0, 0.25, 0.75)   # LF, RF, RR, LR
     body_shift_gain: float = 0.0        # 0..1 shift CoG over support polygon
     idle_step: bool = False             # True = step in place at zero velocity
+    leg_gain: tuple = (1.0,) * 4        # per-leg stride scale (LF,RF,RR,LR)
 
 
 def trot_params(**kw) -> GaitParams:
-    # hardware-verified on XGO-Lite (L-4.3.7): walks fwd ~30 mm/s.
+    # hardware-verified on XGO-Lite (L-4.3.7): walks fwd ~30-40 mm/s.
     # stand_x<0 biases CoG forward over the diagonal support pairs —
     # needed for propulsion on this robot given its ~0.4 s servo lag.
-    base = dict(period=1.5, duty=0.62, step_height=14.0,
+    # period 1.6 + step 15 gives a ~40 mm stance sweep at vx=40 with
+    # enough swing time for the lagged servos to clear the floor.
+    base = dict(period=1.6, duty=0.62, step_height=15.0,
                 stand_x=-10.0, stand_z=96.0,
                 phase_offsets=(0.0, 0.5, 0.0, 0.5))  # LF+RR / RF+LR
     base.update(kw)
@@ -94,7 +97,8 @@ class Gait:
             hx, hy = o[0], o[1]
             v_foot_x = vx - vyaw * hy
             v_foot_y = vy + vyaw * hx
-            D[leg] = (v_foot_x * t_stance, v_foot_y * t_stance)
+            g = self.p.leg_gain[leg]
+            D[leg] = (v_foot_x * t_stance * g, v_foot_y * t_stance * g)
         return D
 
     # ------------------------------------------------------------------
