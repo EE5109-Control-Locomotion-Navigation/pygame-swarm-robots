@@ -73,7 +73,7 @@ def main():
             if not name or name == 'none':
                 continue
             stabs.append({
-                'pid': lambda: PosturePID(kp=0.4, kd=0.06, ki=0.03),
+                'pid': lambda: PosturePID(kp=0.06, kd=0.0, ki=0.015),
                 'heading': HeadingPID,
                 'odom': lambda: TouchdownPID(kin),
                 'lqr': AttitudeLQR,

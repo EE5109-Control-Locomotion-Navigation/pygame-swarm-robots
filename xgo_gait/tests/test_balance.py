@@ -102,27 +102,27 @@ def test_odometry_recovers_velocity(kin):
 # AttitudeLQR — closed-loop on the linear plant
 # ---------------------------------------------------------------------------
 def test_lqr_stabilizes_pendulum():
-    """Simulate theta'' = w^2 theta + (w^2/h) u with u=-Kx: tilt decays."""
-    h = 95.0
+    """Compliance plant theta' = -(1/tau)(theta - beta*s) driven by the
+    LQR shift-rate law converges: tilt decays and the shift releases."""
     dt = 0.05
-    stab = AttitudeLQR(dt=dt, h_mm=h)
-    w2 = G_MM_S2 / h
-    th, thd = np.radians(8.0), 0.0
-    for _ in range(200):
-        u = -float(stab.K @ np.array([th, thd]))       # radians state
-        thd += dt * (w2 * th + (w2 / h) * u)
-        th += dt * thd
+    tau, beta = 0.5, np.radians(-0.5)
+    stab = AttitudeLQR(dt=dt, tau=tau, beta_deg_per_mm=np.degrees(beta))
+    th, s = np.radians(8.0), 0.0
+    for _ in range(400):
+        ds = -float(stab.K @ np.array([th, s]))
+        s += ds
+        th += dt * (-(1.0 / tau) * th + (beta / tau) * s)
     assert abs(th) < np.radians(1.0)
 
 
 def test_lqr_shift_direction(kin, gait):
-    """pitch > 0 (nose up, falling backward) -> body shift -x
-    (feet effectively forward, catching the fall)."""
+    """pitch > 0 (nose up = CoM rearward) -> shift body +x (load front
+    feet, level the nose)."""
     stab = AttitudeLQR(dt=0.05)
     robot = MockRobot(imu=(0.0, 10.0, 0.0))
     for k in range(10):                     # let the smoother settle
         _, shift = stab.update(k * 0.05, 0.05, robot, gait, nominal(kin))
-    assert shift[0] < 0
+    assert shift[0] > 0
 
 
 # ---------------------------------------------------------------------------

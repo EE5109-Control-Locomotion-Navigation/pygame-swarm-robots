@@ -32,7 +32,7 @@ def run(cfg, gait, vx, seconds, lag, weak_leg, weak):
     kin = QuadKinematics()
     stabs = []
     if 'pid' in cfg:
-        stabs.append(PosturePID(kp=0.4, kd=0.06, ki=0.03))
+        stabs.append(PosturePID(kp=0.06, kd=0.0, ki=0.015))
     if 'heading' in cfg:
         stabs.append(HeadingPID())
     if 'odom' in cfg:

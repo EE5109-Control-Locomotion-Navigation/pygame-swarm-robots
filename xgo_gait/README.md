@@ -96,6 +96,22 @@ python demos/compare_demo.py --gait trot --weak-leg 0   # sim A/B
 `XGoLite` API with a first-order servo-lag model (τ≈0.4 s), command
 latency, and `servo_err` miscalibration injection.
 
+### Hardware A/B findings (trot, vx 30 mm/s, 12 s runs)
+
+| Config | rms tilt | yaw end |
+|---|---|---|
+| open-loop | 4.9° | −7.0° drift |
+| +heading | — | **~+1°** (held) |
+| +posture PID (fast gains) | fell over (e-stop −43°) | held |
+| +posture PID (bias-only, smoothed) | 6.4° | held |
+| +LQR (compliance plant) | 5.4° | held |
+| +MPC footholds | 6.9° | held |
+
+Lesson: **heading hold is a clear win**; per-tick posture feedback
+through ~0.5 s of loop delay (servo lag + IMU + BLE) pumps the gait-cycle
+rocking.  Posture corrections only help against *sustained* lean — keep
+them slow (smoothed error, slew-limited, small ki) or off during trot.
+
 ## Use
 
 Python env: `/home/brian/xgolite/venv` (bleak, numpy, matplotlib,
