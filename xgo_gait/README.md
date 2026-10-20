@@ -71,6 +71,31 @@ Verified on the physical robot (`XGOLITE_9878` @ `38:18:2B:4F:E9:DA`):
   Effective geometry therefore differs from the URDF values.
 - Battery % is register 0x01 (1 byte).
 
+## Closed-loop stabilization (`balance.py`, `mpc.py`)
+
+Stabilizers plug into `GaitController(stabilizers=[...])`; each tick they
+read the IMU/servo read-back and adjust foot targets and/or body shift
+before IK.  Literature mapping:
+
+| Layer | Class | Method | Reference |
+|---|---|---|---|
+| PID | `PosturePID`, `HeadingPID`, `TouchdownPID` | leg-length modulation, heading trim, Raibert touchdown | Raibert 1986; Pratt VMC 2001 |
+| LQR | `AttitudeLQR` | linearized pendulum tilt + DARE | Kajita LIPM |
+| MPC | `ZmpMPC` | LIPM-ZMP, box-constrained least squares (`scipy lsq_linear`) | Di Carlo 2018 adapted to position control |
+
+Estimators: `LegOdometry` (body velocity from stance-foot kinematics),
+`AngleRate` (filtered IMU derivatives — the firmware exposes no gyro).
+
+```bash
+walk_demo.py --gait trot --vx 30 --stabilize pid,heading
+walk_demo.py --gait trot --stabilize pid,lqr,mpc
+python demos/compare_demo.py --gait trot --weak-leg 0   # sim A/B
+```
+
+`sim/sim_env.py` provides `SimRobot`, a PyBullet robot duck-typed to the
+`XGoLite` API with a first-order servo-lag model (τ≈0.4 s), command
+latency, and `servo_err` miscalibration injection.
+
 ## Use
 
 Python env: `/home/brian/xgolite/venv` (bleak, numpy, matplotlib,

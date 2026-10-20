@@ -19,7 +19,9 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from xgo_gait import (XGoLite, QuadKinematics, GaitController, Gait,
-                      crawl_params, trot_params, pace_params)
+                      crawl_params, trot_params, pace_params,
+                      PosturePID, HeadingPID, TouchdownPID,
+                      AttitudeLQR, ZmpMPC)
 
 ADDRESS = "38:18:2B:4F:E9:DA"
 
@@ -39,6 +41,9 @@ def main():
     ap.add_argument('--seconds', type=float, default=15.0)
     ap.add_argument('--hz', type=float, default=20.0)
     ap.add_argument('--calibrate', default='')
+    ap.add_argument('--stabilize', default='none',
+                    help='comma list: pid,heading,odom,lqr,mpc '
+                         '(e.g. --stabilize pid,heading)')
     ap.add_argument('--log', default='',
                     help='CSV: t, rpy, 12 servo deg, 12 leg-frame feet')
     args = ap.parse_args()
@@ -62,7 +67,20 @@ def main():
               '| battery:', dog.read_battery(), '%')
         dog.set_motor_speed(200)
 
-        ctl = GaitController(dog, kin, Gait(p), hz=args.hz, mode=args.mode)
+        stabs = []
+        for name in args.stabilize.split(','):
+            name = name.strip().lower()
+            if not name or name == 'none':
+                continue
+            stabs.append({
+                'pid': lambda: PosturePID(kp=0.4, kd=0.06, ki=0.03),
+                'heading': HeadingPID,
+                'odom': lambda: TouchdownPID(kin),
+                'lqr': AttitudeLQR,
+                'mpc': lambda: ZmpMPC(kin),
+            }[name]())
+        ctl = GaitController(dog, kin, Gait(p), hz=args.hz, mode=args.mode,
+                             stabilizers=stabs)
         ctl.on_estop = lambda why: print(f'\n*** e-stop: {why}')
         ctl.set_velocity(args.vx, args.vy, args.vyaw)
 

@@ -9,6 +9,11 @@ from .gait import Gait, GaitParams, trot_params, crawl_params, pace_params
 from .calibrate import (
     calibrate_servo_map, load_calibration, CalibrationResult,
 )
+from .balance import (
+    Stabilizer, AngleRate, LegOdometry,
+    PosturePID, HeadingPID, TouchdownPID, AttitudeLQR,
+)
+from .mpc import ZmpMPC
 
 try:
     from .transport import BleTransport
@@ -23,5 +28,7 @@ __all__ = [
     'D_HIP', 'LF', 'RF', 'RR', 'LR', 'Gait', 'GaitParams',
     'trot_params', 'crawl_params', 'pace_params',
     'calibrate_servo_map', 'load_calibration', 'CalibrationResult',
+    'Stabilizer', 'AngleRate', 'LegOdometry',
+    'PosturePID', 'HeadingPID', 'TouchdownPID', 'AttitudeLQR', 'ZmpMPC',
     'BleTransport', 'XGoLite', 'GaitController',
 ]

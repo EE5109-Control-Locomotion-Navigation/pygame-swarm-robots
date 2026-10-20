@@ -22,10 +22,12 @@ class GaitController:
                  gait: Gait | None = None, hz: float = 20.0,
                  mode: str = MODE_JOINT,
                  limit_margin_deg: float = 2.0,
-                 tilt_limit_deg: float = 30.0):
+                 tilt_limit_deg: float = 30.0,
+                 stabilizers=()):
         self.robot = robot
         self.kin = kin or QuadKinematics()
         self.gait = gait or Gait(crawl_params())
+        self.stabilizers = list(stabilizers)
         self.hz = hz
         self.mode = mode
         self.limit_margin_deg = limit_margin_deg
@@ -48,6 +50,9 @@ class GaitController:
     # ------------------------------------------------------------------
     def set_velocity(self, vx_mm_s=0.0, vy_mm_s=0.0, vyaw_rad_s=0.0):
         self._v = np.array([vx_mm_s, vy_mm_s, vyaw_rad_s], dtype=float)
+        for s in self.stabilizers:
+            if hasattr(s, 'set_desired'):
+                s.set_desired(vx_mm_s, vy_mm_s)
 
     def set_body_pose(self, translation_mm=None, rpy_rad=None):
         if translation_mm is not None:
@@ -73,6 +78,8 @@ class GaitController:
         except Exception:
             self._start_feet = self.gait.nominal_feet()
         self._t0 = time.monotonic()
+        for s in self.stabilizers:
+            s.reset()
         self._running.set()
         self._thread = threading.Thread(
             target=self._loop, name='xgo-gait', daemon=True)
@@ -119,7 +126,11 @@ class GaitController:
 
     # ------------------------------------------------------------------
     def _step(self, t: float):
+        dt = 1.0 / self.hz
         vx, vy, vyaw = self._v
+        for s in self.stabilizers:                      # e.g. heading trim
+            if hasattr(s, 'velocity_delta'):
+                vx, vy, vyaw = np.array([vx, vy, vyaw]) + s.velocity_delta()
         feet = self.gait.foot_targets(t, vx, vy, vyaw)
 
         shift = self.gait.support_shift(t, feet)
@@ -129,6 +140,14 @@ class GaitController:
                           self._body_trans[2]])
             feet = self.kin.apply_body_pose(
                 feet, translation=T, rpy=self._body_rpy)
+
+        # closed-loop stabilizers: foot corrections + extra body shift
+        extra = np.zeros(3)
+        for s in self.stabilizers:
+            feet, ds = s.update(t, dt, self.robot, self.gait, feet)
+            extra += np.asarray(ds, dtype=float)
+        if np.any(extra):
+            feet = self.kin.apply_body_pose(feet, translation=extra)
 
         # ramp-in: blend measured start pose into the gait
         if self._start_feet is not None:
